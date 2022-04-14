@@ -15,8 +15,7 @@ from patient import forms as pforms
 
 def home_view(request):
     x=models.Stock.objects.all()
-    print(x)
-    if len(x)==0:
+    if len(x) == 0:
         blood1=models.Stock()
         blood1.bloodgroup="A+"
         blood1.save()
