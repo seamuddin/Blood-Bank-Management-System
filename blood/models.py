@@ -16,8 +16,22 @@ class BloodRequest(models.Model):
     bloodgroup=models.CharField(max_length=10)
     unit=models.PositiveIntegerField(default=0)
     status=models.CharField(max_length=20,default="Pending")
+    mail=models.CharField(max_length=30,default="Pending")
     date=models.DateField(auto_now=True)
     def __str__(self):
         return self.bloodgroup
 
-        
+class BloodDonorRequest(models.Model):
+    donor=models.ForeignKey(dmodels.Donor,null=True,on_delete=models.CASCADE)
+    patient_name = models.CharField(max_length=30)
+    patient_age = models.PositiveIntegerField()
+    reason = models.CharField(max_length=500)
+    bloodgroup = models.CharField(max_length=10)
+    unit = models.PositiveIntegerField(default=0)
+    status = models.CharField(max_length=20, default="Pending")
+    date = models.DateField(auto_now=True)
+    mail=models.CharField(max_length=30,default="Pending")
+
+
+    def __str__(self):
+        return self.bloodgroup

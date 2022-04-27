@@ -12,9 +12,30 @@ from donor import models as dmodels
 from patient import models as pmodels
 from donor import forms as dforms
 from patient import forms as pforms
+from django.core.mail import send_mail
+from django.conf import settings
+
+
+
+def request_for_blood(request,pk):
+    requestform = forms.DRequestForm()
+    if request.method == 'POST':
+        request_form = forms.DRequestForm(request.POST)
+        if request_form.is_valid():
+            blood_request = request_form.save(commit=False)
+            blood_request.bloodgroup = request_form.cleaned_data['bloodgroup']
+            blood_request.donor = dmodels.Donor.objects.get(id=pk)
+            blood_request.save()
+            message = 'Your submitted request have done, please wait for approval'
+        return render(request, 'blood/donerrequest.html',
+                          {'request_form': request_form, 'message': message})
+
+    return render(request, 'blood/donerrequest.html',{'request_form':requestform,'id':pk})
 
 def home_view(request):
+    donors = dmodels.Donor.objects.all()
     x=models.Stock.objects.all()
+    error = None
     if len(x) == 0:
         blood1=models.Stock()
         blood1.bloodgroup="A+"
@@ -49,8 +70,36 @@ def home_view(request):
         blood8.save()
 
     if request.user.is_authenticated:
-        return HttpResponseRedirect('afterlogin')  
-    return render(request,'blood/index.html')
+        return HttpResponseRedirect('afterlogin')
+
+    if request.POST:
+        stock = models.Stock.objects.get(bloodgroup=request.POST.get('bloodgroup'))
+        if stock.unit != 0:
+            request_form = forms.RequestForm()
+            if request.method == 'POST':
+                stock = models.Stock.objects.get(bloodgroup=request.POST.get('bloodgroup')).unit
+                unit = request.POST.get('unit')
+                if unit:
+                    unit = int(unit)
+                    if stock > unit:
+                        request_form = forms.RequestForm(request.POST)
+                        if request_form.is_valid():
+                            blood_request = request_form.save(commit=False)
+                            blood_request.bloodgroup = request_form.cleaned_data['bloodgroup']
+                            blood_request.save()
+                            message = 'Your submitted request have done, please wait for approval'
+                            return render(request, 'blood/bloodrequest.html',
+                                          {'request_form': request_form, 'message': message})
+                    else:
+                        error = 'This blood is not available in BloodBanks'
+                        return render(request, 'blood/bloodrequest.html',
+                                      {'request_form': request_form, 'error': error})
+
+            return render(request, 'blood/bloodrequest.html', {'request_form': request_form})
+
+        return render(request, 'blood/index.html', {'donors': donors})
+
+    return render(request,'blood/index.html',{'donors':donors})
 
 def is_donor(user):
     return user.groups.filter(name='DONOR').exists()
@@ -189,6 +238,11 @@ def admin_request_view(request):
     return render(request,'blood/admin_request.html',{'requests':requests})
 
 @login_required(login_url='adminlogin')
+def admin_donor_request_view(request):
+    requests=models.BloodDonorRequest.objects.all().filter(status='Pending')
+    return render(request,'blood/admin_donor_request.html',{'requests':requests})
+
+@login_required(login_url='adminlogin')
 def admin_request_history_view(request):
     requests=models.BloodRequest.objects.all().exclude(status='Pending')
     return render(request,'blood/admin_request_history.html',{'requests':requests})
@@ -207,6 +261,14 @@ def update_approve_status_view(request,pk):
     stock=models.Stock.objects.get(bloodgroup=bloodgroup)
     if stock.unit > unit:
         stock.unit=stock.unit-unit
+        name = req.patient_name
+        email = req.mail
+        message = 'Your Request accepted'
+        send_mail('Request For Blood Accept',
+                  message,
+                  settings.EMAIL_HOST_USER, [email])
+        confirmemail = email
+
         stock.save()
         req.status="Approved"
         
@@ -223,6 +285,33 @@ def update_reject_status_view(request,pk):
     req.status="Rejected"
     req.save()
     return HttpResponseRedirect('/admin-request')
+
+
+@login_required(login_url='adminlogin')
+def update_approve_status_view_1(request, pk):
+    req = models.BloodDonorRequest.objects.get(id=pk)
+    message = None
+    bloodgroup = req.bloodgroup
+    name = req.patient_name
+    email = req.mail
+    donor = req.donor.user.first_name+' '+req.donor.user.last_name
+    message = 'Your Request accepted'+'\n'+'Donor :'+donor+'\n'+'Email:'+req.donor.user.email
+    send_mail('Request For Blood Accept',
+              message,
+              settings.EMAIL_HOST_USER, [email])
+    req.status = "Approved"
+    req.save()
+    requests = models.BloodDonorRequest.objects.all().filter(status='Pending')
+    return render(request, 'blood/admin_donor_request.html', {'requests': requests, 'message': message})
+
+
+@login_required(login_url='adminlogin')
+def update_reject_status_view_1(request, pk):
+    req = models.BloodDonorRequest.objects.get(id=pk)
+    req.status = "Rejected"
+    req.save()
+    return HttpResponseRedirect('/admin-donor-request')
+
 
 @login_required(login_url='adminlogin')
 def approve_donation_view(request,pk):

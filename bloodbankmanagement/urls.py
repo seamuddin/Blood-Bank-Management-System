@@ -37,6 +37,7 @@ urlpatterns = [
     path('update-donor/<int:pk>', views.update_donor_view,name='update-donor'),
     path('delete-donor/<int:pk>', views.delete_donor_view,name='delete-donor'),
     path('admin-request', views.admin_request_view,name='admin-request'),
+    path('admin-donor-request', views.admin_donor_request_view,name='admin-donor-request'),
     path('update-patient/<int:pk>', views.update_patient_view,name='update-patient'),
     path('delete-patient/<int:pk>', views.delete_patient_view,name='delete-patient'),
     path('admin-donation', views.admin_donation_view,name='admin-donation'),
@@ -45,5 +46,9 @@ urlpatterns = [
     path('admin-request-history', views.admin_request_history_view,name='admin-request-history'),
     path('update-approve-status/<int:pk>', views.update_approve_status_view,name='update-approve-status'),
     path('update-reject-status/<int:pk>', views.update_reject_status_view,name='update-reject-status'),
-   
+
+path('update-approve-status_1/<int:pk>', views.update_approve_status_view_1,name='update-approve-status1'),
+    path('update-reject-status_1/<int:pk>', views.update_reject_status_view_1,name='update-reject-status1'),
+    path('request/<int:pk>', views.request_for_blood,name='update-reject-status'),
+
 ]
